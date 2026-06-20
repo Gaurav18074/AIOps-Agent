@@ -1,0 +1,59 @@
+{
+  "family": "aiops-agent",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/aiopsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/aiops-agent:latest",
+      "essential": true,
+      "portMappings": [{"containerPort": 8000, "protocol": "tcp"}],
+      "environment": [
+        {"name": "LLM_PROVIDER", "value": "openai"},
+        {"name": "LLM_MODEL", "value": "gpt-4o-mini"},
+        {"name": "DATABASE_URL", "value": "postgresql+psycopg://aiops:PASSWORD@RDS_ENDPOINT:5432/aiops"},
+        {"name": "REDIS_URL", "value": "redis://ELASTICACHE_ENDPOINT:6379/0"}
+      ],
+      "secrets": [
+        {"name": "OPENAI_API_KEY", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:aiops/openai-NNNNNN"},
+        {"name": "SLACK_WEBHOOK_URL", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:aiops/slack-NNNNNN"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aiops-agent",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "api"
+        }
+      },
+      "command": ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    },
+    {
+      "name": "worker",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/aiops-agent:latest",
+      "essential": true,
+      "environment": [
+        {"name": "LLM_PROVIDER", "value": "openai"},
+        {"name": "LLM_MODEL", "value": "gpt-4o-mini"},
+        {"name": "DATABASE_URL", "value": "postgresql+psycopg://aiops:PASSWORD@RDS_ENDPOINT:5432/aiops"},
+        {"name": "REDIS_URL", "value": "redis://ELASTICACHE_ENDPOINT:6379/0"}
+      ],
+      "secrets": [
+        {"name": "OPENAI_API_KEY", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:aiops/openai-NNNNNN"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/aiops-agent",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "worker"
+        }
+      },
+      "command": ["python", "-m", "app.worker"]
+    }
+  ]
+}
