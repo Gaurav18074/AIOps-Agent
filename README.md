@@ -1,3 +1,4 @@
+![Build Status](https://github.com/Gaurav18074/Website-Monitoring/actions/workflows/deploy.yml/badge.svg)
 # AIOps-Agent
 
 ## Autonomous Incident Response System
